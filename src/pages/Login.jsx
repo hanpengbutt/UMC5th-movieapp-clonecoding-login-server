@@ -1,77 +1,120 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import styled from 'styled-components';
 import REG_EXP from '../constants/regExp';
+import API_URL from '../constants/apiUrl';
 import { logIn } from '../store/reducers';
 
 function Login() {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  const [emailValue, setEmailValue] = useState('');
-  const [isEmailValid, setIsEmailValid] = useState(false);
-  const [showEmailErrorMessage, setShowEmailErrorMessage] = useState(false);
+  const [idValue, setIdValue] = useState('');
+  const [isIdValid, setIsIdValid] = useState(false);
+  const [showIdErrorMessage, setShowIdErrorMessage] = useState(false);
 
   const [pwdValue, setPwdValue] = useState('');
   const [isPwdValid, setIsPwdValid] = useState(false);
   const [showPwdErrorMessage, setShowPwdErrorMessage] = useState(false);
 
-  const emailValidTest = emailInput => {
-    const isValid = REG_EXP.email.test(emailInput);
-    setIsEmailValid(isValid);
-    setShowEmailErrorMessage(!isValid);
+  const [submitBtnAble, setSubmitBtnAble] = useState(false);
+  const [showLoading, setShowLoading] = useState(false);
+
+  useEffect(() => {
+    setSubmitBtnAble(isIdValid && isPwdValid);
+  }, [isIdValid, isPwdValid]);
+
+  const idValidTest = idInput => {
+    const isValid = REG_EXP.idAndPwd.test(idInput);
+    setIsIdValid(isValid);
+    setShowIdErrorMessage(!isValid);
   };
+
   const pwdlValidTest = pwdInput => {
-    const isValid = REG_EXP.pwd.test(pwdInput);
+    const isValid = REG_EXP.idAndPwd.test(pwdInput);
     setIsPwdValid(isValid);
     setShowPwdErrorMessage(!isValid);
   };
-  const handleEmailChange = event => {
-    setEmailValue(event.target.value);
-    emailValidTest(event.target.value);
+
+  const handleIdChange = event => {
+    setIdValue(event.target.value);
+    idValidTest(event.target.value);
   };
+
   const handlePwdChange = event => {
     setPwdValue(event.target.value);
     pwdlValidTest(event.target.value);
   };
-  const handleSubmitBtn = event => {
-    dispatch(logIn());
+
+  const handleSubmitBtn = async event => {
     event.preventDefault();
-    navigate('/');
+    setSubmitBtnAble(false);
+    setShowLoading(true);
+    const url = API_URL.login;
+    const data = {
+      id: idValue,
+      pw: pwdValue
+    };
+    await axios
+      .post(url, data)
+      .then(() => {
+        setTimeout(() => {
+          dispatch(logIn());
+          navigate('/');
+        }, 1500);
+      })
+      .catch(error => {
+        setTimeout(() => {
+          setShowLoading(false);
+          setIdValue('');
+          setPwdValue('');
+          setIsIdValid(false);
+          setIsPwdValid(false);
+          alert(error.response.data.message);
+        }, 1500);
+      });
   };
 
   return (
     <LoginContainer>
       <LoginForm onSubmit={handleSubmitBtn}>
         <LoginLabel>
-          이메일과 비밀번호를
+          아이디와 비밀번호를
           <br />
           입력해주세요
         </LoginLabel>
-        <Label htmlFor='email'>
-          이메일 주소
+        <Label htmlFor='id'>
+          아이디
           <Input
-            type='email'
-            id='email'
-            value={emailValue}
-            onChange={handleEmailChange}
+            type='text'
+            id='id'
+            value={idValue}
+            placeholder='영문자 또는 숫자로 이루어진 아이디를 입력해주세요.'
+            onChange={handleIdChange}
           />
         </Label>
-        {showEmailErrorMessage && (
-          <ErrorMessage>올바른 이메일을 입력해주세요.</ErrorMessage>
+        {showIdErrorMessage && (
+          <ErrorMessage>올바른 아이디를 입력해주세요.</ErrorMessage>
         )}
-        <Label htmlFor='password' value={pwdValue} onChange={handlePwdChange}>
+        <Label htmlFor='password'>
           비밀번호
-          <Input type='password' id='password' />
+          <Input
+            type='password'
+            id='password'
+            value={pwdValue}
+            placeholder='영문자 또는 숫자로 이루어진 비밀번호를 입력해주세요.'
+            onChange={handlePwdChange}
+          />
         </Label>
         {showPwdErrorMessage && (
           <ErrorMessage>올바른 비밀번호를 입력해주세요.</ErrorMessage>
         )}
         <SubmitBtn
           type='submit'
-          value='확인'
-          isValid={isEmailValid && isPwdValid}
+          value={showLoading ? 'Loading...' : '확인'}
+          disabled={!submitBtnAble}
         />
       </LoginForm>
     </LoginContainer>
@@ -128,8 +171,8 @@ const SubmitBtn = styled.input`
   margin-top: 8px;
   border-radius: 50px;
   border: none;
-  background-color: ${({ isValid }) => (isValid ? '#22254a' : 'Gainsboro')};
-  color: ${({ isValid }) => (isValid ? 'white' : 'black')};
+  background-color: ${({ disabled }) => (disabled ? 'Gainsboro' : '#22254a')};
+  color: ${({ disabled }) => (disabled ? 'black' : 'white')};
 `;
 
 export default Login;
